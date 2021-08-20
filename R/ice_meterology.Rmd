@@ -1,0 +1,135 @@
+---
+title: "day10_ice"
+author: "Steven Cognac"
+date: "8/20/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(here)
+library(janitor)
+library(ggbeeswarm)
+
+library(GGally)
+
+```
+
+
+```{r}
+ice <- read.csv(here("data", "ntl33_v7.csv"), na = -999)
+
+temp <- read_csv(here("data", "ntl20_v6.csv"))
+```
+```{r}
+ice_lakes <- ice %>% 
+  group_by(lakeid) %>% 
+  summarize(ice_duration)
+  
+ice_lakes
+
+```
+
+```{r}
+
+ice_plot <- ggplot(ice_lakes, aes(x = lakeid, y = ice_duration, color = lakeid)) +
+  geom_beeswarm() +
+  geom_violin(alpha = 0.1)
+
+ice_plot
+```
+Figure 1. Exploratory plot of ice duration for three lakes in the Madison Lake Area in Wisconsin. 
+
+```{r}
+
+## multiple observations per year because there are 3 sites.
+ice_mean <- ice %>% 
+  group_by(year4) %>% 
+  summarize(ice_duration)
+
+ice_mean
+
+ice_mean_plot <- ggplot(ice_mean, aes(x = year4, y = ice_duration)) +
+  geom_line() +
+  theme_minimal() +
+  labs(x = "Year",
+       y = "Ice duration",
+       title = "Ice Duration in the Madison Lake Area over Time") +
+  geom_smooth(method = "loess")
+
+ice_mean_plot
+
+```
+Figure 2. Line plot of mean annual duration of ice cover in the Madison Lake Area of Wisconsin from 1851 to 2019. Long term trend shows a decline in the duration of ice cover over the period.
+
+```{r}
+
+mean_temp <- temp %>% 
+  filter(month %in% c(1, 2, 12)) %>% 
+  group_by(year4) %>% 
+  summarize(mean_temp = mean(ave_air_temp_adjusted))
+  
+
+
+
+```
+
+```{r}
+winter_temp_plot <- ggplot(mean_temp, aes(x = year4, y = mean_temp)) +
+  geom_line() +
+  labs(x = "Year",
+       y = "Temperature (C\U00B0)",
+       title = "Average Winter Temperatures in the Madison, Wisconsin Lake Area",
+       subtitle = "1851 - 2019") +
+  theme_dark() +
+  geom_smooth(method = "loess")
+
+winter_temp_plot
+
+
+
+```
+Figure 3. Average December, January, and February temperatures in the Madison, Wisconsin Lake Area.  Long-term trends show a slight rise over time.
+
+```{r}
+ice_temp <- mean_temp %>% 
+  full_join(ice_mean, by = "year4")
+
+
+
+```
+
+```{r}
+
+ice_temp_plot <- ggplot(ice_temp, aes(x = ice_duration, y = mean_temp)) +
+  geom_point(shape = 5, size = 0.5)
+
+ice_temp_plot
+```
+Figure 4. Average ice duration compared to mean temperature (F).
+
+
+```{r}
+ice_thaw <- ice %>% 
+  filter(year4 >= "1970") %>%
+  mutate(Date = lubridate::ymd(ice_off)) %>% 
+  mutate(day = lubridate::yday(Date))
+
+
+
+```
+```{r}
+ice_off_plot <- ggplot(ice_thaw, aes(y = day, x = Date)) +
+  geom_line() +
+  labs(x = "Year",
+       y = "Day of the Year",
+       title = "Mean Ice Thaw Days in the Madison Lake Areas",
+       subtitle = "1970 - 2019") +
+  geom_smooth(method = "loess")
+
+ice_off_plot
+
+```
+Figure 5. Average day of the year ice thaws in the Madison Lakes Area of Wisconsin.  Trend shows ice is thawing earlier in the year since the 1970s.
